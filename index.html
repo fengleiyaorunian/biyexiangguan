@@ -1,11 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <title>Hello World</title>
+
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <!-- <script src="http://api.tianditu.gov.cn/cdn/plugins/cesium/cesiumTdt.js"></script> //为cesium特供的地形插件 -->
+
+
     <!-- <script src="../Build/Cesium/Cesium.js"></script>
-    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet" /> -->
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet" />    1.102               -->
     <style>
         html,
         body,
@@ -18,35 +23,135 @@
         }
     </style>
 </head>
+
 <body>
+    <script src="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Cesium.js"></script>
     <div id="cesiumContainer"></div>
     <script>
-        var viewer = new Cesium.Viewer("cesiumContainer",{
+        var token = 'f438e39b62ad0126f49b64124c7c6370';  //相当于key
+        // 服务域名
+        var tdtUrl = 'https://t{s}.tianditu.gov.cn/';
+        // 服务负载子域
+        var subdomains = ['0', '1', '2', '3', '4', '5', '6', '7'];
 
-        animation:false,//是否创建动画小器件，左下角仪表 
-        timeline: false,//是否显示时间轴    
-        sceneModePicker: false,//是否显示3D/2D选择器    
-        baseLayerPicker: true,//是否显示图层选择器   
-        geocoder: false,//是否显示geocoder小器件，右上角查询按钮   
-        scene3DOnly: true,//如果设置为true，则所有几何图形以3D模式绘制以节约GPU资源 
-        navigationHelpButton: false,//是否显示右上角的帮助按钮
-        homeButton: false,//是否显示Home按钮
-        infoBox: true,//是否显示信息框    
-        showRenderLoopErrors: false//如果设为true，将在一个HTML面板中显示错误信息
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOTNiNjcxNy03MGMwLTQzMTAtOTNhZi03ZWQxMzQxMzhiYTUiLCJpZCI6MTI2MzE0LCJpYXQiOjE2Nzc0MjIzMjd9.zW-s0dw4BxEuBeEEr5h5eQoiV51Qs9_AegdLHF79K8s';
 
+        // var terrainModels = Cesium.createDefaultTerrainProviderViewModels();
+
+        // Cesium.Ion.defaultServer="https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer";
+        var viewer = new Cesium.Viewer("cesiumContainer", {
+
+            animation: false,//是否创建动画小器件，左下角仪表 
+            timeline: false,//是否显示时间轴    
+            sceneModePicker: false,//是否显示3D/2D选择器    
+            baseLayerPicker: false,//是否显示图层选择器   
+            geocoder: false,//是否显示geocoder小器件，右上角查询按钮   
+            scene3DOnly: true,//如果设置为true，则所有几何图形以3D模式绘制以节约GPU资源 
+            navigationHelpButton: false,//是否显示右上角的帮助按钮
+            homeButton: false,//是否显示Home按钮
+            infoBox: true,//是否显示信息框    
+            showRenderLoopErrors: false,    //如果设为true，将在一个HTML面板中显示错误信息
+            // terrainProvider: new Cesium.ArcGISTiledElevationTerrainProvider({
+            //     url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer'
+            // })
+            // 这个方法不行
+
+            // terrainProvider: new Cesium.CesiumTerrainProvider({
+            //     url: Cesium.Ion.defaultServer,                      url : Cesium.IonResource.fromAssetId(3956),
+            //     requestVertexNormals: true
+            // })
+            // 这个方法也不行
         });
-// 后来的：http://localhost:9003/model/tU83HZ2PT/tileset.json
-// 原来的 http://data.mars3d.cn/3dtiles/qx-hfdxy/tileset.json
-                
+
+
+        
+        // 全局变量 用于存储底图源 和 底图层
+        let basemapSource = '';
+        let basemap = '';
+        function imageryBasemapLayers(layers) {
+            if (basemapSource == '') {
+                basemapSource = new Cesium.WebMapTileServiceImageryProvider({
+                    // 这里是你的 geoserver服务点击查看图层的 url
+                    url: 'http://t0.tianditu.gov.cn/img_w/wmts?tk=f438e39b62ad0126f49b64124c7c6370',
+                    // 这里是自定义的图层名称
+                    layer: 'img',
+                    style: 'default',
+                    format: 'tiles',   // tiles
+                    credit: new Cesium.Credit("天地图"),
+                    tileMatrixSetID: 'w',
+                });
+                subdomains: ['t0', 't1', 't2', 't3', 't4', 't5', 't6', 't7']
+                viewer.imageryLayers.addImageryProvider(basemapSource);
+            } else {
+                viewer.imageryLayers.remove(basemap);
+                basemapSource = '';
+                basemap = '';
+            }
+        };
+
+        // http://t0.tianditu.gov.cn/img_w/wmts?tilematrix=18&
+        // layer=img&style=default&tilerow=24&tilecol=51&tilematrixset=w&format=tiles&transparent=true&service=WMTS&version=1.0.0&request=GetTile&tk=f438e39b62ad0126f49b64124c7c6370
+        
+        //https://t0.tianditu.gov.cn/mapservice/swdx?tk=f438e39b62ad0126f49b64124c7c6370    ok
+        //https://t0.tianditu.gov.cn/DataServer?T=elv_c&tk=f438e39b62ad0126f49b64124c7c6370 寄
+
+
+        // 后来的：http://localhost:9003/model/tU83HZ2PT/tileset.json
+        // 原来的 http://data.mars3d.cn/3dtiles/qx-hfdxy/tileset.json
+
         let tileset = new Cesium.Cesium3DTileset({
             url: "./small_3d_title/tileset.json",
             maximumScreenSpaceError: 2,          //最大的屏幕空间误差
             maximumNumberOfLoadedTiles: 1000,    //最大加载瓦片数
+
         });
         viewer.scene.primitives.add(tileset);
-        viewer.zoomTo(tileset)
+        viewer.zoomTo(tileset);
+
+
+        //获取当前矩阵
+        var originalMatrix = Cesium.Matrix4.clone(tileset.modelMatrix);
+
+        // 计算平移后的矩阵
+        var translateMatrix = Cesium.Matrix4.fromTranslation(new Cesium.Cartesian3(0, 0, -500));
+        var newMatrix = Cesium.Matrix4.multiply(originalMatrix, translateMatrix, new Cesium.Matrix4());
+
+        // 设置新矩阵
+        tileset.modelMatrix = newMatrix;
+
+
+
+        var terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({
+            url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+            token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOTNiNjcxNy03MGMwLTQzMTAtOTNhZi03ZWQxMzQxMzhiYTUiLCJpZCI6MTI2MzE0LCJpYXQiOjE2Nzc0MjIzMjd9.zW-s0dw4BxEuBeEEr5h5eQoiV51Qs9_AegdLHF79K8s'
+        });
+        viewer.terrainProvider = terrainProvider;
+
+
+
+        // 叠加地形服务
+        var terrainUrls = new Array();
+
+        for (var i = 0; i < subdomains.length; i++) {
+            var url = tdtUrl.replace('{s}', subdomains[i]) + 'mapservice/swdx?tk=' + token;
+            console.log(url);
+            terrainUrls.push(url);
+        }
+
+
+
+        var provider = new Cesium.CesiumTerrainProvider({
+            urls: terrainUrls
+        });
+
+        viewer.terrainProvider = provider;
+
+
+
+
 
     </script>
-        
+
 </body>
+
 </html>
