@@ -3,8 +3,12 @@
 
 <head>
     <title>Hello World</title>
+
     <script src="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Cesium.js"></script>
     <link href="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+    <!-- <script src="../Build/Cesium/Cesium.js"></script>
+    <link href="../Build/Cesium/Widgets/widgets.css" rel="stylesheet" />    1.102               -->
+
     <style>
         html,
         body,
@@ -15,16 +19,51 @@
             padding: 0;
             overflow: hidden;
         }
+
+        #slide {
+            position: absolute;
+            top: 100px;
+            left: 0px;
+            z-index: 1;
+        }
+
+        #a2 {
+            position: absolute;
+            top: 50px;
+            left: 0px;
+            z-index: 1;
+            width: auto;
+            height: 25px;
+            background-color: aliceblue;
+
+        }
     </style>
 </head>
 
 <body>
     <!-- <script src="https://cesium.com/downloads/cesiumjs/releases/1.102/Build/Cesium/Cesium.js"></script>   onmouseup  -->
-    <button id="btn">点我进行对比</button>
-    <div id="cesiumContainer"></div>
-    <script>
-        var tdtUrl = 'https://t{s}.tianditu.gov.cn/';
 
+    <input type="range" id="slide" min="0.1" max="1.9" step="0.1" onmouseup="mUp(this)" />
+    <button id="btn">点我</button>
+    <div id="cesiumContainer"></div>
+    <div id='a2'></div>
+
+    <video id="myVideo" controls loop preload="auto" autoplay="autoplay" >
+        <!--   muted="" autoplay="" loop="" crossorigin="" controls="" muted="muted"  autoplay="autoplay"   -->
+        <!-- Your browser does not support the <code>video</code> element. -->
+        <source src="./others/444.mp4" type="video/mp4">
+    </video>
+
+    <script>
+
+        var token = 'f438e39b62ad0126f49b64124c7c6370';  //相当于key
+        var tdtUrl = 'https://t{s}.tianditu.gov.cn/';
+        // 服务负载子域
+        var subdomains = ['0', '1', '2', '3', '4', '5', '6', '7'];
+
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOTNiNjcxNy03MGMwLTQzMTAtOTNhZi03ZWQxMzQxMzhiYTUiLCJpZCI6MTI2MzE0LCJpYXQiOjE2Nzc0MjIzMjd9.zW-s0dw4BxEuBeEEr5h5eQoiV51Qs9_AegdLHF79K8s';
+
+        // Cesium.Ion.defaultServer="https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer";
         var viewer = new Cesium.Viewer("cesiumContainer", {
 
             animation: false,//是否创建动画小器件，左下角仪表 
@@ -60,8 +99,43 @@
         });
         viewer.scene.primitives.add(tileset);
         viewer.zoomTo(tileset);
+        // 这个模型的原坐标为（四角坐标） ： x: 119.65607247371491, y: 30.37123136718532, height: 268.35496491544944
+        // x: 119.656597914043, y: 30.37123286453514, height: 284.91806870983606
+        // x: 119.65659468067275, y: 30.372139076377668, height: 267.31158116940395
+        // x: 119.65606979668608, y: 30.3721377013219, height: 276.25079641105816
 
 
+        //获取当前矩阵
+        var originalMatrix = Cesium.Matrix4.clone(tileset.modelMatrix);
+
+        // 计算平移后的矩阵
+        var translateMatrix = Cesium.Matrix4.fromTranslation(new Cesium.Cartesian3(0, 0, 20));
+        var newMatrix = Cesium.Matrix4.multiply(originalMatrix, translateMatrix, new Cesium.Matrix4());
+
+        // 设置新矩阵
+        tileset.modelMatrix = newMatrix;
+
+
+        // 加载地形
+        var terrainProvider = new Cesium.ArcGISTiledElevationTerrainProvider({
+            url: 'https://elevation3d.arcgis.com/arcgis/rest/services/WorldElevation3D/Terrain3D/ImageServer',
+            token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJlOTNiNjcxNy03MGMwLTQzMTAtOTNhZi03ZWQxMzQxMzhiYTUiLCJpZCI6MTI2MzE0LCJpYXQiOjE2Nzc0MjIzMjd9.zW-s0dw4BxEuBeEEr5h5eQoiV51Qs9_AegdLHF79K8s'
+        });
+        viewer.terrainProvider = terrainProvider;
+
+
+
+
+        var position = Cesium.Cartesian3.fromDegrees(119.656224, 30.3714165, 269);
+        // var position = polygon1.position;
+        var heading = Cesium.Math.toRadians(0);
+        var pitch = 0;
+        var roll = 0;
+        var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+        var orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
+        // 首先获取到视频元素,别获取了，这条路行不通
+        var videoElement = document.getElementById('myVideo');
 
         const polygon1 = viewer.entities.add({
             polygon: {
@@ -72,22 +146,114 @@
                     119.65606979668608, 30.3721377013219, 1000,
                     119.65607247371491, 30.37123136718532, 1000,
                 ]),
-                //  放东西的地方   videoElement,     268.35496491544944
-                material: Cesium.Color.RED.withAlpha(0.5),
+
+                //  放东西的地方   videoElement,     268.35496491544944    Cesium.Color.RED.withAlpha(0.5)
+                material: videoElement,
+
                 classificationType: Cesium.ClassificationType.CESIUM_3D_TILE,
                 clampToGround: false,
+
+
+                // stRotation: Cesium.Math.toRadians(108),  // 平面上的方向转动
             },
+            orientation: orientation,
             position: Cesium.Cartesian3.fromDegrees(119.656224, 30.3714165, 270),
+
+            id: 'mypolygon',
         });
 
 
 
 
+        function mUp(obj) {
+            console.log('1');
+        }
+
+
+        // function mUp(obj) {
+        //     array.length = 0
+        //     console.log(obj.value);
+        //     //方法三，删除所有
+        //     viewer.entities.removeAll();
+
+        //     var position_a = [119.65637671434116, 30.371602914868024, 238.75757163978204];
+        //     var position_b = [119.65607247371491, 30.37123136718532, 238.75757163978204];
+
+
+        //     //获取中心坐标
+        //     var centre_x = (position_a[0] + position_b[0]) * 0.5;
+        //     var centre_y = (position_a[1] + position_b[1]) * 0.5;
+        //     var centre_z = 238.75757163978204;
+
+        //     // var temp = document.getElementById('a2').innerText
+        //     // // 判断是否有新的“中心点”被输入
+        //     // if (temp !=""&& temp != null && temp != undefined) {
+        //     //     centre_x = temp.split(';')[0];
+        //     //     centre_y = temp.split(';')[1];
+        //     //     console.log(centre_x);
+        //     // }
+
+
+        //     //获取改变后的差值的增量(为正)  3 个方向上的   结果发现高度是没办法计算的，只能输入两个点
+        //     var change_x = Math.abs(position_a[0] - position_b[0]) * obj.value;
+        //     var change_y = Math.abs(position_a[1] - position_b[1]) * obj.value;
+
+        //     position_a = [centre_x + change_x, centre_y + change_y, centre_z];
+        //     position_b = [centre_x - change_x, centre_y - change_y, centre_z];
+
+        //     polygon = viewer.entities.add({
+
+        //         polygon: {
+        //             hierarchy: Cesium.Cartesian3.fromDegreesArrayHeights([
+        //                 position_a[0], position_a[1], centre_z,
+        //                 position_b[0], position_a[1], centre_z,
+        //                 position_b[0], position_b[1], centre_z,
+        //                 position_a[0], position_b[1], centre_z,
+        //                 position_a[0], position_a[1], centre_z,
+        //             ]),
+        //             // clampToGround: true,
+        //             material: videoElement,
+        //             classificationType: Cesium.ClassificationType.BOTH,
+        //             id: 'uniqueId', // entity的识别id，而不是document的id
+        //             rotation: Cesium.Math.toRadians(90),
+
+        //             stRotation: Cesium.Math.toRadians(10),  // 平面上的方向转动
+        //         }
+        //     });
+
+        //     array = [1];
+        //     console.log(array);
+
+
+        //     // viewer.zoomTo(polygon);
+        // }
+
+
+
+        // document.getElementById("slide").addEventListener("mousedown", function () {
+
+        // });
+
+
         document.getElementById("btn").addEventListener("click", threeFn);
 
+
+
+
         function threeFn() {
+            // createModel(3000);
+            // console.log(polygon1);
             viewer.entities.removeAll();
+
+            // console.log(polygon1.orientation.getValue());
+
             var position = Cesium.Cartesian3.fromDegrees(119.656224, 30.3714165, 3000);
+            var heading = Cesium.Math.toRadians(135);
+            var pitch = Cesium.Math.toRadians(30);;
+            var roll = Cesium.Math.toRadians(40);;
+            var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+            var orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
 
             var polygon2 = viewer.entities.add({
                 polygon: {
@@ -99,17 +265,164 @@
                         119.65607247371491, 30.37123136718532, 1000,
                     ]),
 
-                    material: Cesium.Color.RED.withAlpha(0.5),
+                    //  放东西的地方   videoElement,     268.35496491544944   Cesium.Color.RED.withAlpha(0.5)
+                    material: videoElement,
                     clampToGround: false,
-                },
-                position: position,
+                    classificationType: Cesium.ClassificationType.CESIUM_3D_TILE,
 
+                    // stRotation: Cesium.Math.toRadians(108),  // 平面上的方向转动
+                },
+
+                position: position,
+                orientation: orientation,
+                id: 'mypolygon',
             });
+
+
+
+            polygon2.position.setValue(position);
+
+            var terrainSamplePositions = [position];
+            Cesium.sampleTerrain(terrainProvider, 9, terrainSamplePositions).then(function (updatedPositions) {
+                var updatedPosition = updatedPositions[0];
+                polygon2.position.setValue(updatedPosition);
+            });
+
+            // polygon2.orientation = orientation;
+
+
+            console.log(polygon2.orientation.getValue());
+            // viewer.scene.requestRender();
+            // viewer.trackedEntity = polygon1;
             viewer.zoomTo(polygon2);
+
         }
 
 
+        // function createModel(height) {
+        //     console.log(polygon1);
+        //     viewer.entities.removeAll();
 
+        //     console.log(polygon1);
+        //     // console.log(polygon1.orientation.getValue());
+
+
+        //     var position = Cesium.Cartesian3.fromDegrees(119.656224, 30.3714165, height);
+        //     // var position = polygon1.position;
+        //     var heading = Cesium.Math.toRadians(135);
+        //     var pitch = 0;
+        //     var roll = 0;
+        //     var hpr = new Cesium.HeadingPitchRoll(heading, pitch, roll);
+        //     var orientation = Cesium.Transforms.headingPitchRollQuaternion(position, hpr);
+
+
+        //     var polygon1 = viewer.entities.add({
+        //         polygon: {
+        //             hierarchy: Cesium.Cartesian3.fromDegreesArrayHeights([
+        //                 119.65607247371491, 30.37123136718532, 1000,
+        //                 119.656597914043, 30.37123286453514, 1000,
+        //                 119.65659468067275, 30.372139076377668, 1000,
+        //                 119.65606979668608, 30.3721377013219, 1000,
+        //                 119.65607247371491, 30.37123136718532, 1000,
+        //             ]),
+
+        //             //  放东西的地方   videoElement,     268.35496491544944
+        //             material: Cesium.Color.RED.withAlpha(0.5),
+        //             clampToGround: false,
+        //             // classificationType: Cesium.ClassificationType.CESIUM_3D_TILE,
+
+        //             // stRotation: Cesium.Math.toRadians(108),  // 平面上的方向转动
+        //         },
+        //         orientation: orientation,
+        //         height: 2000,
+
+        //         position: Cesium.Cartesian3.fromDegrees(119.656224, 30.3714165),
+        //         id: 'mypolygon',
+        //     });
+
+
+        //     polygon1.orientation = orientation;
+
+
+        //     console.log(polygon1.orientation.getValue());
+        //     viewer.scene.requestRender();
+        //     viewer.trackedEntity = polygon1;
+        //     // viewer.zoomTo(polygon1);
+        // }
+
+
+
+
+        // 119.65607247371491, 30.37123136718532, 1000,
+        //                 119.656597914043, 30.37123286453514, 1000,
+        //                 119.65659468067275, 30.372139076377668, 1000,
+        //                 119.65606979668608, 30.3721377013219, 1000,
+        //                 119.65607247371491, 30.37123136718532, 1000,
+
+
+
+
+        // var newScale = new Cesium.Cartesian3(2.0, 2.0, 2.0); // 第二次缩放比例
+
+        // polygon1.polygon.scale = new Cesium.Cartesian3(
+        //     polygon1.polygon.scale.x * newScale.x,
+        //     polygon1.polygon.scale.y * newScale.y,
+        //     polygon1.polygon.scale.z * newScale.z
+        // );
+
+
+        // var resultScale = polygon1.polygon.scale;
+        // console.log(resultScale);
+
+        // viewer.render();
+
+
+
+        // //方法二，直接删除
+        //viewer.entities.removeById('uniqueId')
+
+        // 举例：四角方位坐标
+        // 119.65637671434116, 30.371602914868024, 268.75757163978204,
+        // 119.65607247371491, 30.371602914868024, 268.75757163978204,
+        // 119.65607247371491, 30.37123136718532, 268.75757163978204,
+        // 119.65637671434116, 30.37123136718532, 268.75757163978204,
+        // 119.65637671434116, 30.371602914868024, 268.75757163978204,
+
+        // 对角坐标： 119.65637671434116, 30.371602914868024, 268.75757163978204,      119.65607247371491, 30.37123136718532, 268.75757163978204
+        // 中心坐标  119.656224， 30.3714165 ，268.75757163978204
+
+
+        // 开启深度检测     开着的情况下，3dtiles会向下移动大约530m，x、y轴方向发生轻微位移
+        // viewer.scene.globe.depthTestAgainstTerrain = true;
+
+        var handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+        handler.setInputAction(function (evt) {
+
+            var scene = viewer.scene;
+            // 判断场景的模式，不能是 变形模式
+            if (scene.mode !== Cesium.SceneMode.MORPHING) {
+                // scene.pick: 返回scene中指定位置的顶端的primitive属性的一个对象
+                let pickedObject = scene.pick(evt.position);
+                // 判断是否拾取到模型
+                let cartesian = viewer.scene.pickPosition(evt.position);
+                // 是否获取到空间坐标
+                if (Cesium.defined(cartesian)) {
+                    // // 空间坐标转世界坐标(弧度)
+                    let cartographic = Cesium.Cartographic.fromCartesian(cartesian);
+                    // 弧度转为角度（经纬度）
+                    let lon = Cesium.Math.toDegrees(cartographic.longitude);
+                    let lat = Cesium.Math.toDegrees(cartographic.latitude);
+                    //模型高度
+                    let height = cartographic.height;
+                    // console.log('模型表面的经纬度高程是：', { x: lon, y: lat, height: height });
+                    lon = lon.toFixed(7);
+                    lat = lat.toFixed(7);
+
+                    document.getElementById('a2').innerText = lon + ";" + lat;
+
+                }
+            }
+        }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
 
     </script>
